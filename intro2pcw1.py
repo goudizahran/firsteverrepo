@@ -19,7 +19,6 @@ def open_image_file(filename):
         with open(filename, "rb") as f:
             return bytearray(f.read())
     except:
-        print("file not found. please check file name")
         return None 
 
 
@@ -45,4 +44,82 @@ def get_pixel_data_offset(data):
 def get_bits_per_pixel(data):
 # return bits per pixel value from BMP header (for simple validation), determines whether the image is grey-scale or color (RGB)
     return int.from_bytes(data[28:30], byteorder='little')
+
+
+
+# encoding funtions 
+
+
+
+def can_image_fit_message(data, message):
+# simple check whether there are enough bytes in the image to hide the message 
+    pixel_start = get_pixel_data_offset(data)
+    bpp = get_bits_per_pixel(data)
+    bytes_per_pixel = bpp // 8
+    num_pixels = (len(data) - pixel_start) // bytes_per_pixel
+    available_bits = num_pixels * bytes_per_pixel
+    required_bits = len(message) * 8
+    return required_bits <= available_bits
+
+
+
+def encode_message_into_pixels(data, message):
+# write message bits into LSB of image bytes starting at pixel data offset
+    pixel_start = get_pixel_data_offset(data)
+
+# convert message to bit list
+    msg_bits = []
+    for ch in message:
+        bits = format(ord(ch), "08b")
+        for b in bits:
+            msg_bits.append(int(b))
+
+# write bits into LSBs
+    idx = pixel_start
+    for bit in msg_bits:
+        data[idx] = (data[idx] & 0xFE) | bit
+        idx += 1
+
+    return data
+
+
+
+def hide_mode():
+    print("\n--- HIDE (encode) MODE ---")
+    filename = input("enter BMP filename to hide message in: ").strip()
+    data = open_image_file(filename)
+    if data is None:
+        print("file not found. please check filename.")
+        return
+
+    if not is_bmp_file(data):
+        print("error. file is not BMP. please try again using an BMP file.")
+        return
+
+    bpp = get_bits_per_pixel(data)
+    if bpp not in (8, 24):
+        print("error. unexpected bits-per-pixel value:", bpp)
+        return
+
+    pixel_start = get_pixel_data_offset(data)
+
+    user_message = input("please enter your secret message: ")
+    full_message = START_MARKER + user_message + END_MARKER
+
+    if not can_image_fit_message(data, full_message):
+        print("error: image too small for the message. please try a different image. ")
+        return
+
+    new_data = encode_message_into_pixels(data, full_message)
+
+
+    outname = input("enter output filename for new image (e.g., new.bmp): ").strip()
+    save_image_file(outname, new_data)
+    print("message hidden successfully! output saved to:", outname)
+
+
+
+# decoding functions 
+
+
 
