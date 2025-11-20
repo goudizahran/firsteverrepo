@@ -123,3 +123,83 @@ def hide_mode():
 
 
 
+def extract_bits_from_pixels(data):
+    pixel_start = get_pixel_data_offset(data)
+    bits = []
+
+    # read LSB of every byte after pixel_start
+    for i in range(pixel_start, len(data)):
+        bits.append(data[i] & 1)
+
+    return bits
+
+
+def bits_to_string(bits):
+    chars = []
+    for i in range(0, len(bits), 8):
+        byte_bits = bits[i:i+8]
+        if len(byte_bits) < 8:
+            break
+        value = int("".join(str(b) for b in byte_bits), 2)
+        chars.append(chr(value))
+    return "".join(chars)
+
+
+def decode_message_from_image(data):
+    bits = extract_bits_from_pixels(data)
+    raw_text = bits_to_string(bits)
+
+    # Search for markers
+    start_index = raw_text.find(START_MARKER)
+    end_index = raw_text.find(END_MARKER)
+
+    if start_index == -1 or end_index == -1:
+        return None  # no valid message found
+
+    return raw_text[start_index + len(START_MARKER) : end_index]
+
+
+def reveal_mode():
+    print("\n--- REVEAL (decode) MODE ---")
+    filename = input("enter BMP filename to read hidden message from: ").strip()
+    data = open_image_file(filename)
+
+    if data is None:
+        print("file not found. please check filename.")
+        return
+
+    if not is_bmp_file(data):
+        print("error: file is not a valid BMP.")
+        return
+
+    message = decode_message_from_image(data)
+
+    if message is None:
+        print("no hidden message found.")
+    else:
+        print("\nhidden message found:")
+        print(message)
+
+
+
+# main menu 
+
+
+while True:
+    print("\n--- STEGANOGRAPHY PROGRAM ---")
+    print("enter 'hide' to hide a message")
+    print("enter 'retrieve' to retrieve a message")
+
+    choice = input("enter an option: ").strip().lower()
+
+    try:
+        if choice=="hide" or choice=="Hide"
+            hide_mode()
+        elif choice=="retrieve" or choice=="Retrieve"
+            reveal_mode()
+
+    except:
+        print("invalid choice. please try again.")
+
+
+
