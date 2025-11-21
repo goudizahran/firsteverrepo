@@ -83,35 +83,45 @@ def encode_message_into_pixels(data, message):
     return data
 
 
-
 def hide_mode():
     print("\n--- HIDE (encode) MODE ---")
-    filename = input("enter BMP filename to hide message in: ").strip()
-    data = open_image_file(filename)
-    if data is None:
-        print("file not found. please check filename.")
-        return
 
-    if not is_bmp_file(data):
-        print("error. file is not BMP. please try again using an BMP file.")
-        return
+    # --- Loop until a valid BMP file is opened ---
+    while True:
+        filename = input("enter BMP filename to hide message in: ").strip()
+        data = open_image_file(filename)
 
-    bpp = get_bits_per_pixel(data)
-    if bpp not in (8, 24):
-        print("error. unexpected bits-per-pixel value:", bpp)
-        return
+        if data is None:
+            print("file not found. please check filename and try again.")
+            continue
+
+        if not is_bmp_file(data):
+            print("error: file is not a BMP image. try a different file.")
+            continue
+
+        bpp = get_bits_per_pixel(data)
+        if bpp not in (8, 24):
+            print("error: unsupported bits-per-pixel value:", bpp)
+            continue
+
+        # success → we can break the loop
+        break
 
     pixel_start = get_pixel_data_offset(data)
 
-    user_message = input("please enter your secret message: ")
-    full_message = START_MARKER + user_message + END_MARKER
+    # --- Loop until the message fits inside the image ---
+    while True:
+        user_message = input("please enter your secret message: ")
+        full_message = START_MARKER + user_message + END_MARKER
 
-    if not can_image_fit_message(data, full_message):
-        print("error: image too small for the message. please try a different image. ")
-        return
+        if can_image_fit_message(data, full_message):
+            break
+        else:
+            print("error: message too long for this image.")
+            print("please enter a shorter message.\n")
 
+    # encode now that everything is valid
     new_data = encode_message_into_pixels(data, full_message)
-
 
     outname = input("enter output filename for new image (e.g., new.bmp): ").strip()
     save_image_file(outname, new_data)
@@ -158,28 +168,38 @@ def decode_message_from_image(data):
 
     return raw_text[start_index + len(START_MARKER) : end_index]
 
-
 def reveal_mode():
     print("\n--- REVEAL (decode) MODE ---")
-    filename = input("enter BMP filename to read hidden message from: ").strip()
-    data = open_image_file(filename)
 
-    if data is None:
-        print("file not found. please check filename.")
-        return
+    # --- Loop until a valid BMP file is opened ---
+    while True:
+        filename = input("enter BMP filename to read hidden message from: ").strip()
+        data = open_image_file(filename)
 
-    if not is_bmp_file(data):
-        print("error: file is not a valid BMP.")
-        return
+        if data is None:
+            print("file not found. please check filename and try again.")
+            continue
 
+        if not is_bmp_file(data):
+            print("error: file is not a BMP image. try again.")
+            continue
+
+        bpp = get_bits_per_pixel(data)
+        if bpp not in (8, 24):
+            print("error: unsupported bits-per-pixel value:", bpp)
+            continue
+
+        # valid file → stop looping
+        break
+
+    # Decode message after successful file validation
     message = decode_message_from_image(data)
 
     if message is None:
-        print("no hidden message found.")
+        print("no hidden message found in this image.")
     else:
         print("\nhidden message found:")
         print(message)
-
 
 
 # main menu 
@@ -188,14 +208,14 @@ def reveal_mode():
 while True:
     print("\n--- STEGANOGRAPHY PROGRAM ---")
     print("enter 'hide' to hide a message")
-    print("enter 'retrieve' to retrieve a message")
+    print("enter 'reveal' to reveal a message")
 
     choice = input("enter an option: ").strip().lower()
 
     try:
-        if choice=="hide" or choice=="Hide"
+        if choice=="hide" or choice=="Hide":
             hide_mode()
-        elif choice=="retrieve" or choice=="Retrieve"
+        elif choice=="reveal" or choice=="Reveal":
             reveal_mode()
 
     except:
