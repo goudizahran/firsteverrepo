@@ -4,8 +4,26 @@
 
 
 
-START_MARKER = "$hhh"
-END_MARKER = "$ecret"
+# marker generation 
+def generate_marker(seed, length=5):
+    character_library = "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
+
+    # simple deterministic hash, sum of character ordinal values
+    seed_hash = sum(ord(char) for char in seed)
+    
+    marker = ""
+    current_value = seed_hash
+    
+    for i in range(length):
+        # use modulus to cycle through the character pool
+        index = current_value % len(character_library)
+        marker += character_library[index]
+        
+        # simple modification for the next character (LCG)
+        current_value = (current_value * 7 + 1)
+        
+    return "$" + marker 
+
 
 
 
@@ -86,7 +104,7 @@ def encode_message_into_pixels(data, message):
 def hide_mode():
     print("\n--- HIDE (encode) MODE ---")
 
-    # --- Loop until a valid BMP file is opened ---
+    # --- loop until a valid BMP file is opened ---
     while True:
         filename = input("enter BMP filename to hide message in: ").strip()
         data = open_image_file(filename)
@@ -104,15 +122,20 @@ def hide_mode():
             print("error: unsupported bits-per-pixel value:", bpp)
             continue
 
-        # success → we can break the loop
+        # success means we can break the loop
         break
 
     pixel_start = get_pixel_data_offset(data)
+    # --- get the seed (password) and generate markers ---
+    secret_key = input("please enter a password for the message: ").strip()
+    # generate unique start and end markers based on the key
+    start_marker = generate_marker(secret_key + "alpha")
+    end_marker = generate_marker(secret_key + "omega")
 
-    # --- Loop until the message fits inside the image ---
+    # --- loop until the message fits inside the image ---
     while True:
         user_message = input("please enter your secret message: ")
-        full_message = START_MARKER + user_message + END_MARKER
+        full_message = start_marker + user_message + end_marker
 
         if can_image_fit_message(data, full_message):
             break
@@ -160,13 +183,13 @@ def decode_message_from_image(data):
     raw_text = bits_to_string(bits)
 
     # Search for markers
-    start_index = raw_text.find(START_MARKER)
-    end_index = raw_text.find(END_MARKER)
+    start_index = raw_text.find(start_marker)
+    end_index = raw_text.find(end_marker)
 
     if start_index == -1 or end_index == -1:
         return None  # no valid message found
 
-    return raw_text[start_index + len(START_MARKER) : end_index]
+    return raw_text[start_index + len(start_marker) : end_index]
 
 def reveal_mode():
     print("\n--- REVEAL (decode) MODE ---")
@@ -192,15 +215,26 @@ def reveal_mode():
         # valid file → stop looping
         break
 
-    # Decode message after successful file validation
-    message = decode_message_from_image(data)
+    # --- ask for the seed (password) and regenerate markers ---
+while True:
+    secret_key = input("please enter the password used to hide the message (or type 'quit' to exit): ").strip() 
+    # allow the user to exit the password loop
+    if secret_key.upper() == "QUIT":
+            return  # exit the entire reveal_mode function
+    
+    # regenerate the markers using the key and the unique suffixes
+    start_marker = generate_marker(secret_key + "alpha")
+    end_marker = generate_marker(secret_key + "omega")
+
+    # passing regenerated markers
+    message = decode_message_from_image(data, start_marker, end_marker)
 
     if message is None:
-        print("no hidden message found in this image.")
+        print("no hidden message found in this image, or the key was incorrect. please try again. ")
     else:
         print("\nhidden message found:")
         print(message)
-
+        break 
 
 # main menu 
 
@@ -211,11 +245,12 @@ while True:
     print("enter 'reveal' to reveal a message")
 
     choice = input("enter an option: ").strip().lower()
+    choice= choice.upper()
 
     try:
-        if choice=="hide" or choice=="Hide":
+        if choice=="HIDE":
             hide_mode()
-        elif choice=="reveal" or choice=="Reveal":
+        elif choice=="REVEAL":
             reveal_mode()
 
     except:
