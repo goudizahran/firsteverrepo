@@ -88,18 +88,11 @@ def get_bits_per_pixel(data):
 
 # encoding funtions 
 
-
-
 def can_image_fit_message(data, message):
-# simple check whether there are enough bytes in the image to hide the message 
     pixel_start = get_pixel_data_offset(data)
-    bpp = get_bits_per_pixel(data)
-    bytes_per_pixel = bpp // 8
-    num_pixels = (len(data) - pixel_start) // bytes_per_pixel
-    available_bits = num_pixels * bytes_per_pixel
+    available_bits = len(data) - pixel_start
     required_bits = len(message) * 8
     return required_bits <= available_bits
-
 
 
 def encode_message_into_pixels(data, message):
@@ -194,6 +187,11 @@ def hide_mode():
     final_message_to_hide = start_marker + user_message + end_marker 
     new_data = encode_message_into_pixels(data, final_message_to_hide)
 
+    #save new file 
+    output_filename = input("enter output BMP filename (e.g., new.bmp): ").strip()
+    save_image_file(output_filename, new_data)
+    print("message hidden successfully in:", output_filename)
+
 
 
 # decoding functions 
@@ -222,7 +220,7 @@ def bits_to_string(bits):
     return "".join(chars)
 
 
-def decode_message_from_image(data):
+def decode_message_from_image(data, start_marker, end_marker):
     bits = extract_bits_from_pixels(data)
     raw_text = bits_to_string(bits)
 
@@ -288,16 +286,13 @@ while True:
     print("enter 'hide' to hide a message")
     print("enter 'reveal' to reveal a message")
 
-    choice = input("enter an option: ").strip().lower()
-    choice= choice.upper()
+    choice = input("enter an option: ").strip().upper()
 
-    try:
-        if choice=="HIDE":
-            hide_mode()
-        elif choice=="REVEAL":
-            reveal_mode()
-
-    except:
+    if choice == "HIDE":
+        hide_mode()
+    elif choice == "REVEAL":
+        reveal_mode()
+    else:
         print("invalid choice. please try again.")
 
 
