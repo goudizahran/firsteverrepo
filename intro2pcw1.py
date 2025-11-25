@@ -40,6 +40,27 @@ def open_image_file(filename):
         return None 
 
 
+def read_message_from_file():
+    while True:
+        filename = input("enter text file name to read message from (or enter 'quit' to cancel): ").strip()
+        
+        if filename.upper() == 'QUIT':
+            return None 
+
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                message = f.read().strip() 
+                return message
+        
+        
+        except FileNotFoundError:
+            print("error. text file not found. please check filename and try again.")
+            
+        except Exception as e:
+            print(f"unexpected error: {e}")
+            print("please ensure the file is valid and accessible, then try again.")
+    
+
 
 def save_image_file(filename, data):
 # save modified bytes to a new BMP file 
@@ -132,23 +153,46 @@ def hide_mode():
     start_marker = generate_marker(secret_key + "alpha")
     end_marker = generate_marker(secret_key + "omega")
 
-    # --- loop until the message fits inside the image ---
-    while True:
-        user_message = input("please enter your secret message: ")
-        full_message = start_marker + user_message + end_marker
-
-        if can_image_fit_message(data, full_message):
-            break
+    
+    # --- unified loop for message input method and capacity check ---
+    user_message = None
+    while user_message is None:
+        source_choice = input("please enter 'D' to directly input your message, or 'F' to input a text file containing your message (or enter 'quit' to cancel): ").strip().upper()
+        
+        current_message = None
+        
+        if source_choice == "D":
+            current_message = input("please enter your secret message: ")
+            
+        elif source_choice == "F":
+            current_message = read_message_from_file() 
+        
+        elif source_choice == "QUIT":
+            return 
+        
         else:
-            print("error: message too long for this image.")
-            print("please enter a shorter message.\n")
+            print("invalid choice. please try again.")
+            continue 
+
+        if current_message and current_message.strip():
+            final_message_content = current_message.strip()
+            full_message = start_marker + final_message_content + end_marker
+
+            if can_image_fit_message(data, full_message):
+                user_message = final_message_content 
+                break
+            else:
+                print("\nerror. message is too long for this image.")
+                print("please try again with a shorter message. ")
+                # user_message remains None, loop continues for new selection
+        else:
+            print("no message received. please try again.")
+
+
 
     # encode now that everything is valid
-    new_data = encode_message_into_pixels(data, full_message)
-
-    outname = input("enter output filename for new image (e.g., new.bmp): ").strip()
-    save_image_file(outname, new_data)
-    print("message hidden successfully! output saved to:", outname)
+    final_message_to_hide = start_marker + user_message + end_marker 
+    new_data = encode_message_into_pixels(data, final_message_to_hide)
 
 
 
@@ -216,25 +260,25 @@ def reveal_mode():
         break
 
     # --- ask for the seed (password) and regenerate markers ---
-while True:
-    secret_key = input("please enter the password used to hide the message (or type 'quit' to exit): ").strip() 
-    # allow the user to exit the password loop
-    if secret_key.upper() == "QUIT":
+    while True:
+        secret_key = input("please enter the password used to hide the message (or enter 'quit' to exit): ").strip() 
+        # allow the user to exit the password loop
+        if secret_key.upper() == "QUIT":
             return  # exit the entire reveal_mode function
     
-    # regenerate the markers using the key and the unique suffixes
-    start_marker = generate_marker(secret_key + "alpha")
-    end_marker = generate_marker(secret_key + "omega")
+        # regenerate the markers using the key and the unique suffixes
+        start_marker = generate_marker(secret_key + "alpha")
+        end_marker = generate_marker(secret_key + "omega")
 
-    # passing regenerated markers
-    message = decode_message_from_image(data, start_marker, end_marker)
+        # passing regenerated markers
+        message = decode_message_from_image(data, start_marker, end_marker)
 
-    if message is None:
-        print("no hidden message found in this image, or the key was incorrect. please try again. ")
-    else:
-        print("\nhidden message found:")
-        print(message)
-        break 
+        if message is None:
+            print("no hidden message found in this image, or the key was incorrect. please try again. ")
+        else:
+            print("\nhidden message found:")
+            print(message)
+            break 
 
 # main menu 
 
