@@ -90,29 +90,61 @@ def get_bits_per_pixel(data):
 
 def can_image_fit_message(data, message):
     pixel_start = get_pixel_data_offset(data)
-    available_bits = len(data) - pixel_start
+    bpp = get_bits_per_pixel(data)
+    bytes_per_pixel = bpp // 8
+
+    usable_channels = bytes_per_pixel
+    if bytes_per_pixel == 4:
+        usable_channels = 3  # skip alpha
+
+    total_usable_bytes = (len(data) - pixel_start)
+    usable_bytes = (total_usable_bytes // bytes_per_pixel) * usable_channels
+
     required_bits = len(message) * 8
-    return required_bits <= available_bits
+    return required_bits <= usable_bytes
+
 
 
 def encode_message_into_pixels(data, message):
-# write message bits into LSB of image bytes starting at pixel data offset
+    # find where pixel data starts (we do not touch the BMP header)
     pixel_start = get_pixel_data_offset(data)
 
-# convert message to bit list
+    # determine how many bytes each pixel uses (1 = 8-bit, 3 = 24-bit, 4 = 32-bit)
+    bpp = get_bits_per_pixel(data)
+    bytes_per_pixel = bpp // 8
+
+    # convert every character in the message into 8 bits
     msg_bits = []
     for ch in message:
-        bits = format(ord(ch), "08b")
-        for b in bits:
-            msg_bits.append(int(b))
+        bits = format(ord(ch), "08b")  # convert character to binary (8 bits)
+        msg_bits.extend(int(b) for b in bits)
 
-# write bits into LSBs
+    # idx = position in the image byte array where we start writing
     idx = pixel_start
-    for bit in msg_bits:
-        data[idx] = (data[idx] & 0xFE) | bit
+    bit_index = 0               # track which message bit we are writing
+    total_bits = len(msg_bits)  # total number of bits to write
+
+    # loop through and hide every bit of the message
+    while bit_index < total_bits:
+
+        # identify which byte (within each pixel) we are on:
+        # for 24-bit: channel 0=R, 1=G, 2=B
+        # for 32-bit: channel 0=R, 1=G, 2=B, 3=A
+        channel = (idx - pixel_start) % bytes_per_pixel
+
+        # skip the alpha channel in 32-bit BMP (we do not modify transparency to avoid corrupting the image)
+        if bytes_per_pixel == 4 and channel == 3:
+            idx += 1
+            continue
+
+        # write message bit into the least significant bit (LSB) of this pixel byte
+        data[idx] = (data[idx] & 0xFE) | msg_bits[bit_index]
+
+        # move to next message bit and next image byte
+        bit_index += 1
         idx += 1
 
-    return data
+    return data  
 
 
 def hide_mode():
@@ -132,7 +164,7 @@ def hide_mode():
             continue
 
         bpp = get_bits_per_pixel(data)
-        if bpp not in (8, 24):
+        if bpp not in (8, 24, 32):
             print("error: unsupported bits-per-pixel value:", bpp)
             continue
 
@@ -199,14 +231,37 @@ def hide_mode():
 
 
 def extract_bits_from_pixels(data):
+    # find where pixel data begins (we skip the BMP header)
     pixel_start = get_pixel_data_offset(data)
-    bits = []
 
-    # read LSB of every byte after pixel_start
-    for i in range(pixel_start, len(data)):
-        bits.append(data[i] & 1)
+    # determine how many bytes each pixel uses: 1 = 8-bit, 3 = 24-bit, 4 = 32-bit
+    bpp = get_bits_per_pixel(data)
+    bytes_per_pixel = bpp // 8
 
+    bits = []       # list to store extracted LSB bits
+    idx = pixel_start
+
+    # read every pixel byte until end of file
+    while idx < len(data):
+
+        # identify which channel we are reading:
+        # for 32-bit BMP: channel 3 = alpha, which we skip
+        channel = (idx - pixel_start) % bytes_per_pixel
+
+        # skip the alpha channel in 32-bit images (avoid transparency changes)
+        if bytes_per_pixel == 4 and channel == 3:
+            idx += 1
+            continue
+
+        # extract the least significant bit (LSB) from this pixel byte
+        bits.append(data[idx] & 1)
+
+        # move to the next byte in the image data
+        idx += 1
+
+    # return the full list of extracted bits
     return bits
+
 
 
 def bits_to_string(bits):
@@ -250,7 +305,7 @@ def reveal_mode():
             continue
 
         bpp = get_bits_per_pixel(data)
-        if bpp not in (8, 24):
+        if bpp not in (8, 24, 32):
             print("error: unsupported bits-per-pixel value:", bpp)
             continue
 
