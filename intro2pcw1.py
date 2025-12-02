@@ -178,33 +178,44 @@ def hide_mode():
     start_marker = generate_marker(secret_key + "alpha")
     end_marker = generate_marker(secret_key + "omega")
 
-    
-    # --- unified loop for message input method and capacity check ---
+    # --- loop for message input with ASCII-only validation ---
     user_message = None
     while user_message is None:
-        source_choice = input("please enter 'D' to directly input your message, or 'F' to input a text file containing your message (or enter 'quit' to cancel): ").strip().upper()
-        
+        source_choice = input(
+            "please enter 'D' to directly input your message, or 'F' to input a text file containing your message (or enter 'quit' to cancel): "
+        ).strip().upper()
+
         current_message = None
-        
+
         if source_choice == "D":
             current_message = input("please enter your secret message: ")
-            
+
         elif source_choice == "F":
-            current_message = read_message_from_file() 
-        
+            current_message = read_message_from_file()
+            if current_message is None:
+                continue  # user chose to quit or file error
+
         elif source_choice == "QUIT":
-            return 
-        
+            return
+
         else:
             print("invalid choice. please try again.")
-            continue 
+            continue
 
         if current_message and current_message.strip():
             final_message_content = current_message.strip()
+
+            # ASCII-only check for both input methods
+            try:
+                final_message_content.encode("ascii")
+            except UnicodeEncodeError:
+                print("error: message contains non-ASCII characters. please try again.")
+                continue
+
             full_message = start_marker + final_message_content + end_marker
 
             if can_image_fit_message(data, full_message):
-                user_message = final_message_content 
+                user_message = final_message_content
                 break
             else:
                 print("\nerror. message is too long for this image.")
@@ -213,17 +224,14 @@ def hide_mode():
         else:
             print("no message received. please try again.")
 
-
-
     # encode now that everything is valid
-    final_message_to_hide = start_marker + user_message + end_marker 
+    final_message_to_hide = start_marker + user_message + end_marker
     new_data = encode_message_into_pixels(data, final_message_to_hide)
 
-    #save new file 
+    # save new file
     output_filename = input("enter output BMP filename (e.g., new.bmp): ").strip()
     save_image_file(output_filename, new_data)
     print("message hidden successfully in:", output_filename)
-
 
 
 # decoding functions 
@@ -336,7 +344,7 @@ def reveal_mode():
 # main menu 
 
 
-while True:
+
     print("\n--- STEGANOGRAPHY PROGRAM ---")
     print("enter 'hide' to hide a message")
     print("enter 'reveal' to reveal a message")
