@@ -46,7 +46,8 @@ def read_message_from_file():
         
         if filename.upper() == 'QUIT':
             return None 
-
+        if not filename.lower().endswith(".txt"):
+            filename += ".txt"
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 message = f.read().strip() 
@@ -153,6 +154,9 @@ def hide_mode():
     # --- loop until a valid BMP file is opened ---
     while True:
         filename = input("enter BMP filename to hide message in: ").strip()
+        # automatically add .bmp if missing
+        if not filename.lower().endswith(".bmp"):
+            filename += ".bmp"
         data = open_image_file(filename)
 
         if data is None:
@@ -173,6 +177,26 @@ def hide_mode():
 
     pixel_start = get_pixel_data_offset(data)
     
+    # --- calculate maximum message capacity in characters ---
+    bpp = get_bits_per_pixel(data)
+    bytes_per_pixel = bpp // 8
+    usable_channels = bytes_per_pixel
+
+    if bytes_per_pixel == 4:
+        usable_channels = 3  # skip alpha channel
+
+    total_usable_bytes = (len(data) - pixel_start)
+    usable_bytes = (total_usable_bytes // bytes_per_pixel) * usable_channels
+
+    max_message_bits = usable_bytes
+    max_message_chars = max_message_bits // 8  # total available space including start & end markers
+
+    # subtract marker size (6 chars for start marker, 6 chars for end marker, 12 chars in total)
+    user_max_chars = max_message_chars - 12
+
+    if user_max_chars < 0:
+        user_max_chars = 0   # in case the imgae cannot even fit 12 chars, user_max_chars would be negative
+
     # --- get the seed (password) and generate markers ---
     secret_key = input("please enter a password for the message: ").strip()
     # generate unique start and end markers based on the key
@@ -189,7 +213,7 @@ def hide_mode():
         current_message = None
 
         if source_choice == "D":
-            current_message = input("please enter your secret message: ")
+            current_message = input(f"please enter your secret message (max {user_max_chars} characters): ")
 
         elif source_choice == "F":
             current_message = read_message_from_file()
@@ -231,8 +255,11 @@ def hide_mode():
 
     # save new file
     output_filename = input("enter output BMP filename (e.g., new.bmp): ").strip()
+
+
     save_image_file(output_filename, new_data)
     print("message hidden successfully in:", output_filename)
+
 
 
 # decoding functions 
@@ -303,6 +330,9 @@ def reveal_mode():
     # --- Loop until a valid BMP file is opened ---
     while True:
         filename = input("enter BMP filename to read hidden message from: ").strip()
+        # automatically add .bmp if missing
+        if not filename.lower().endswith(".bmp"):
+            filename += ".bmp"
         data = open_image_file(filename)
 
         if data is None:
