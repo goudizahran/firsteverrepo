@@ -172,6 +172,7 @@ def hide_mode():
         break
 
     pixel_start = get_pixel_data_offset(data)
+    
     # --- get the seed (password) and generate markers ---
     secret_key = input("please enter a password for the message: ").strip()
     # generate unique start and end markers based on the key
@@ -344,7 +345,7 @@ def reveal_mode():
 # main menu 
 
 
-
+while True:
     print("\n--- STEGANOGRAPHY PROGRAM ---")
     print("enter 'hide' to hide a message")
     print("enter 'reveal' to reveal a message")
@@ -357,6 +358,4 @@ def reveal_mode():
         reveal_mode()
     else:
         print("invalid choice. please try again.")
-
-
 
