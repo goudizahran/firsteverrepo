@@ -151,7 +151,7 @@ def hide_mode():
 
     # loop until a valid BMP file is opened 
     while True:
-        filename = input("enter BMP filename to hide message in: ").strip()
+        filename = input("enter BMP filename to hide message in (e.g., old.bmp): ").strip()
         data = open_image_file(filename)
 
         if data is None:
