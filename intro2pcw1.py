@@ -358,7 +358,7 @@ def reveal_mode():
         message = decode_message_from_image(data, start_marker, end_marker)
 
         if message is None:
-            print("no hidden message found in this image, or the key was incorrect. please try again. ")
+            print("no hidden message found in this image, or the password was incorrect. please try again. ")
         else:
             print("\nhidden message found:")
             print(message)
