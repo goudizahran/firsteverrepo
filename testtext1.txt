@@ -1,0 +1,1 @@
+hello world!! im going to attempt to encode this message into a BMP image by providing by steganography program with this text file - judy <3

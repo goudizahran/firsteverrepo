@@ -46,8 +46,6 @@ def read_message_from_file():
         
         if filename.upper() == 'QUIT':
             return None 
-        if not filename.lower().endswith(".txt"):
-            filename += ".txt"
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 message = f.read().strip() 
@@ -151,12 +149,9 @@ def encode_message_into_pixels(data, message):
 def hide_mode():
     print("\n--- HIDE (encode) MODE ---")
 
-    # --- loop until a valid BMP file is opened ---
+    # loop until a valid BMP file is opened 
     while True:
         filename = input("enter BMP filename to hide message in: ").strip()
-        # automatically add .bmp if missing
-        if not filename.lower().endswith(".bmp"):
-            filename += ".bmp"
         data = open_image_file(filename)
 
         if data is None:
@@ -177,7 +172,7 @@ def hide_mode():
 
     pixel_start = get_pixel_data_offset(data)
     
-    # --- calculate maximum message capacity in characters ---
+    # calculate maximum message capacity in characters 
     bpp = get_bits_per_pixel(data)
     bytes_per_pixel = bpp // 8
     usable_channels = bytes_per_pixel
@@ -197,13 +192,13 @@ def hide_mode():
     if user_max_chars < 0:
         user_max_chars = 0   # in case the imgae cannot even fit 12 chars, user_max_chars would be negative
 
-    # --- get the seed (password) and generate markers ---
+    # get the seed (password) and generate markers 
     secret_key = input("please enter a password for the message: ").strip()
     # generate unique start and end markers based on the key
     start_marker = generate_marker(secret_key + "alpha")
     end_marker = generate_marker(secret_key + "omega")
 
-    # --- loop for message input with ASCII-only validation ---
+    # loop for message input with ASCII-only validation 
     user_message = None
     while user_message is None:
         source_choice = input(
@@ -243,7 +238,7 @@ def hide_mode():
                 user_message = final_message_content
                 break
             else:
-                print("\nerror. message is too long for this image.")
+                print("error. message is too long for this image.")
                 print("please try again with a shorter message. ")
                 # user_message remains None, loop continues for new selection
         else:
@@ -315,7 +310,7 @@ def decode_message_from_image(data, start_marker, end_marker):
     bits = extract_bits_from_pixels(data)
     raw_text = bits_to_string(bits)
 
-    # Search for markers
+    # search for markers
     start_index = raw_text.find(start_marker)
     end_index = raw_text.find(end_marker)
 
@@ -327,12 +322,10 @@ def decode_message_from_image(data, start_marker, end_marker):
 def reveal_mode():
     print("\n--- REVEAL (decode) MODE ---")
 
-    # --- Loop until a valid BMP file is opened ---
+    #  loop until a valid BMP file is opened 
     while True:
         filename = input("enter BMP filename to read hidden message from: ").strip()
         # automatically add .bmp if missing
-        if not filename.lower().endswith(".bmp"):
-            filename += ".bmp"
         data = open_image_file(filename)
 
         if data is None:
@@ -351,7 +344,7 @@ def reveal_mode():
         # valid file → stop looping
         break
 
-    # --- ask for the seed (password) and regenerate markers ---
+    # ask for the seed (password) and regenerate markers 
     while True:
         secret_key = input("please enter the password used to hide the message (or enter 'quit' to exit): ").strip() 
         # allow the user to exit the password loop
