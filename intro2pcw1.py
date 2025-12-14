@@ -325,7 +325,6 @@ def reveal_mode():
     #  loop until a valid BMP file is opened 
     while True:
         filename = input("enter BMP filename to read hidden message from: ").strip()
-        # automatically add .bmp if missing
         data = open_image_file(filename)
 
         if data is None:
